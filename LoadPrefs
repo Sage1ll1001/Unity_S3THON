@@ -1,0 +1,69 @@
+using UnityEngine;
+using UnityEngine.UI;
+using TMPro;
+
+public class LoadPrefs : MonoBehaviour
+{
+    [Header("General Settings")]
+    [SerializeField] private bool canUse = false;
+    [SerializeField] private MenuController menuController;
+
+    [Header("Volume Settings")]
+    [SerializeField] private TMP_Text volumeTextValue = null;
+    [SerializeField] private Slider volumeSlider = null;
+
+    [Header("Brightness Settings")]
+    [SerializeField] private TMP_Text brightnessTextValue = null;
+    [SerializeField] private Slider brightnessSlider = null;
+
+    [Header("Quality Level Settings")]
+    [SerializeField] private TMP_Dropdown qualityDropdown = null;
+
+    [Header("Fullscreen Settings")]
+    [SerializeField] private Toggle fullscreenToggle = null;
+
+    [Header("Invert Y Settings")]
+    [SerializeField] private Toggle invertYToggle = null;
+
+    [Header("Sensitivity Settings")]
+    [SerializeField] private TMP_Text controllerSenTextValue = null;
+    [SerializeField] private Slider controllerSenSlider = null;
+
+    private void Awake()
+    {
+        if (!canUse) return;
+
+        // --- Volume ---
+        float volume = PlayerPrefs.GetFloat("masterVolume", 1f);
+        volumeSlider.value = volume;
+        AudioListener.volume = volume;
+        if (volumeTextValue != null) volumeTextValue.text = volume.ToString("0.0");
+
+        // --- Brightness ---
+        float brightness = PlayerPrefs.GetFloat("masterBrightness", 1f);
+        brightnessSlider.value = brightness;
+        if (brightnessTextValue != null) brightnessTextValue.text = brightness.ToString("0.0");
+
+        // Apply brightness visually (example using ambient intensity)
+        RenderSettings.ambientIntensity = brightness;
+
+        // --- Quality ---
+        int quality = PlayerPrefs.GetInt("masterQuality", 1);
+        qualityDropdown.value = quality;
+        QualitySettings.SetQualityLevel(quality);
+
+        // --- Fullscreen ---
+        bool isFullscreen = PlayerPrefs.GetInt("masterFullscreen", 1) == 1;
+        fullscreenToggle.isOn = isFullscreen;
+        Screen.fullScreen = isFullscreen;
+
+        // --- Sensitivity ---
+        float sens = PlayerPrefs.GetFloat("masterSens", menuController.defaultSen);
+        controllerSenSlider.value = sens;
+        if (controllerSenTextValue != null) controllerSenTextValue.text = sens.ToString("0");
+        menuController.mainControllerSen = Mathf.RoundToInt(sens);
+
+        // --- Invert Y ---
+        invertYToggle.isOn = PlayerPrefs.GetInt("masterInvertY", 0) == 1;
+    }
+}

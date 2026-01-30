@@ -1,0 +1,45 @@
+using UnityEngine;
+using TMPro;
+
+public class Score : MonoBehaviour
+{
+    [Header("References")]
+    public Transform player;
+    public TextMeshProUGUI scoreText;
+    public TextMeshProUGUI kritaScoreText;
+    public TextMeshProUGUI finalScoreText;
+    public TextMeshProUGUI finalKritaText;
+
+    private int kritaScore = 0;
+
+    void Start()
+    {
+        kritaScore = PlayerPrefs.GetInt("Krita", 0);
+    }
+
+    void Update()
+    {
+        if (player == null) return;
+
+        string playerZ = player.position.z.ToString("0");
+
+        if (scoreText != null)
+            scoreText.text = playerZ;
+
+        if (kritaScoreText != null)
+            kritaScoreText.text = "Krita: " + kritaScore;
+
+        if (finalScoreText != null)
+            finalScoreText.text = "Score: " + playerZ;
+
+        if (finalKritaText != null)
+            finalKritaText.text = "Kritas: " + kritaScore;
+    }
+
+    public void AddKrita(int amount)
+    {
+        kritaScore += amount;
+        PlayerPrefs.SetInt("Krita", kritaScore);
+        PlayerPrefs.Save();
+    }
+}

@@ -1,0 +1,65 @@
+using UnityEngine;
+using TMPro;
+using System.Collections.Generic;
+
+public class PlayerNameManager : MonoBehaviour
+{
+    public TMP_InputField nameInputField;
+    public TMP_Dropdown nameDropdown;
+
+    private List<string> playerNames = new List<string>();
+
+    void Start()
+    {
+        // Load all saved player names
+        string allNames = PlayerPrefs.GetString("AllPlayerNames", "");
+        if (!string.IsNullOrEmpty(allNames))
+        {
+            playerNames = new List<string>(allNames.Split('|'));
+        }
+
+        RefreshDropdown();
+    }
+
+    public void SaveName()
+    {
+        string newName = nameInputField.text.Trim();
+
+        if (string.IsNullOrEmpty(newName))
+        {
+            Debug.LogWarning("Enter a valid name!");
+            return;
+        }
+
+        // Save if new
+        if (!playerNames.Contains(newName))
+        {
+            playerNames.Add(newName);
+            PlayerPrefs.SetString("AllPlayerNames", string.Join("|", playerNames));
+        }
+
+        // Set as current player
+        PlayerPrefs.SetString("CurrentPlayer", newName);
+        PlayerPrefs.Save();
+
+        Debug.Log("✅ Player selected: " + newName);
+    }
+
+    public void SelectExistingName(int index)
+    {
+        if (index >= 0 && index < playerNames.Count)
+        {
+            PlayerPrefs.SetString("CurrentPlayer", playerNames[index]);
+            PlayerPrefs.Save();
+            Debug.Log("✅ Player selected from list: " + playerNames[index]);
+        }
+    }
+
+    private void RefreshDropdown()
+    {
+        if (nameDropdown == null) return;
+
+        nameDropdown.ClearOptions();
+        nameDropdown.AddOptions(playerNames);
+    }
+}

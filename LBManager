@@ -1,0 +1,80 @@
+using System.Collections.Generic;
+using System.Linq;
+using UnityEngine;
+using TMPro;
+
+[System.Serializable]
+public class PlayerData
+{
+    public string playerName;
+    public int score;
+}
+
+public class LBManager : MonoBehaviour
+{
+    [Header("UI References")]
+    public TMP_Text leaderboardText;  // Assign in Inspector
+    public TMP_InputField nameInput;
+    public TMP_Dropdown modeDropdown;
+
+    private List<PlayerData> playerList = new List<PlayerData>();
+
+    void Start()
+    {
+        LoadLeaderboard();
+        UpdateLeaderboardUI();
+    }
+
+    public void SaveScore(int newScore)
+    {
+        string playerName = nameInput.text;
+        string mode = modeDropdown.options[modeDropdown.value].text;
+
+        // Add new score
+        PlayerData player = new PlayerData
+        {
+            playerName = playerName + " (" + mode + ")",
+            score = newScore
+        };
+        playerList.Add(player);
+
+        // Sort top 5
+        playerList = playerList.OrderByDescending(p => p.score).Take(5).ToList();
+
+        // Save (for now just PlayerPrefs)
+        for (int i = 0; i < playerList.Count; i++)
+        {
+            PlayerPrefs.SetString("name" + i, playerList[i].playerName);
+            PlayerPrefs.SetInt("score" + i, playerList[i].score);
+        }
+
+        PlayerPrefs.Save();
+        UpdateLeaderboardUI();
+    }
+
+    void LoadLeaderboard()
+    {
+        playerList.Clear();
+
+        for (int i = 0; i < 5; i++)
+        {
+            string name = PlayerPrefs.GetString("name" + i, "");
+            int score = PlayerPrefs.GetInt("score" + i, 0);
+
+            if (!string.IsNullOrEmpty(name))
+            {
+                playerList.Add(new PlayerData { playerName = name, score = score });
+            }
+        }
+    }
+
+    void UpdateLeaderboardUI()
+    {
+        leaderboardText.text = "Top 5 Scores\n";
+
+        for (int i = 0; i < playerList.Count; i++)
+        {
+            leaderboardText.text += $"{i + 1}. {playerList[i].playerName} - {playerList[i].score}\n";
+        }
+    }
+}

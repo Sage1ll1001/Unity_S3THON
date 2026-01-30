@@ -1,0 +1,55 @@
+using UnityEngine;
+using UnityEngine.SceneManagement;
+
+public class GameManager : MonoBehaviour
+{
+    bool gameHasEnded = false;
+    public float restartDelay = 3f;
+    public GameObject CompleteLevelUI;
+
+  public void CompleteLevel()
+{
+    Debug.Log("CompleteLevel() called.");
+    
+    if (CompleteLevelUI == null)
+    {
+        Debug.LogError("❌ CompleteLevelUI is not assigned!");
+        return;
+    }
+
+    Debug.Log("✅ Setting CompleteLevelUI active...");
+    CompleteLevelUI.SetActive(true);
+}
+
+
+
+    public void EndGame()
+    {
+        if (gameHasEnded == false)
+        {
+            gameHasEnded = true;
+            Debug.Log("GAME OVER");
+            Invoke("Restart", restartDelay);
+        }
+    }
+
+    void Restart()
+    {
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+    }
+
+    // ✅ Add this method so the animation event works
+   public void LoadNextLevel()
+{
+    int nextSceneIndex = SceneManager.GetActiveScene().buildIndex + 1;
+    if (nextSceneIndex < SceneManager.sceneCountInBuildSettings)
+    {
+        SceneManager.LoadScene(nextSceneIndex);
+    }
+    else
+    {
+        Debug.Log("No more levels! You're done 🎉");
+    }
+}
+
+}

@@ -1,0 +1,257 @@
+using UnityEngine;
+using UnityEngine.InputSystem;
+using System.Collections;
+
+public class PMovement : MonoBehaviour
+{
+    [Header("Movement Settings")]
+    public Rigidbody rb;
+    public float forwardForce = 500f;
+    public float sidewaysForce = 500f;
+    public float jumpForce = 7f;
+    public float downwardForce = 10f;
+    public float turnSpeed = 90f;
+
+    private bool isGrounded = true;
+    private bool isPaused = false;
+
+    [Header("Touch Controls")]
+    public GameObject touchUI;
+    private bool useTouchControls;
+
+    [Header("Swipe Settings")]
+    private Vector2 touchStartPos;
+    private Vector2 touchEndPos;
+    private bool isSwiping = false;
+    public float swipeThreshold = 55f;
+    public float swipeMultiplier = 0.05f;
+
+    [Header("Swipe & Button Multipliers")]
+    public float swipeSidewaysMultiplier = 0.03f;
+    public float swipeJumpMultiplier = 0.7f;
+    public float swipeSlamMultiplier = 0.7f;
+    public float buttonSidewaysMultiplier = 0.03f;
+    public float buttonJumpMultiplier = 0.7f;
+    public float buttonSlamMultiplier = 0.7f;
+
+    [Header("Action Sounds")]
+    public AudioClip jumpClip;
+    public AudioClip slamClip;
+    public AudioClip leftClip;
+    public AudioClip rightClip;
+    public AudioClip swipeClip;
+    public AudioClip boostClip;
+    private AudioSource audioSource;
+
+    [Header("Boost Settings")]
+    public float boostMultiplier = 2f;
+    public float boostDuration = 3f;
+    private bool isBoostActive = false;
+
+    private GameManager gameManager;
+
+    void Start()
+    {
+        gameManager = FindAnyObjectByType<GameManager>();
+        rb.freezeRotation = true;
+
+        useTouchControls = PlayerPrefs.GetInt("TouchControls", 0) == 1;
+
+        if (touchUI != null)
+            touchUI.SetActive(!useTouchControls);
+
+        audioSource = gameObject.AddComponent<AudioSource>();
+        audioSource.playOnAwake = false;
+        audioSource.loop = false;
+    }
+
+    void FixedUpdate()
+    {
+        if (isPaused) return;
+
+        float currentForward = forwardForce * (isBoostActive ? boostMultiplier : 1f);
+        rb.AddForce(0, 0, currentForward * Time.deltaTime);
+
+        HandleKeyboardMovement();
+
+        if (rb.position.y <= -5f)
+            gameManager.EndGame();
+    }
+
+    void Update()
+    {
+        if (Keyboard.current.sKey.wasPressedThisFrame)
+        {
+            isPaused = !isPaused;
+            Time.timeScale = isPaused ? 0f : 1f;
+        }
+
+        if (!isPaused)
+        {
+            // Only handle keyboard/mouse input if touch controls are OFF
+            if (!useTouchControls)
+                HandleKeyboardMouseInput();
+
+            // Handle swipe input if touch controls are ON
+            if (useTouchControls)
+                HandleTouchInput();
+
+            // Boost key
+            if (Keyboard.current.fKey.wasPressedThisFrame && !isBoostActive)
+                StartCoroutine(ActivateBoost());
+        }
+    }
+
+    #region Keyboard / Mouse
+    void HandleKeyboardMovement()
+    {
+        if (Keyboard.current.dKey.isPressed || Keyboard.current.rightArrowKey.isPressed)
+            MoveRight();
+
+        if (Keyboard.current.aKey.isPressed || Keyboard.current.leftArrowKey.isPressed)
+            MoveLeft();
+    }
+
+    void HandleKeyboardMouseInput()
+    {
+        if (Mouse.current == null) return;
+
+        Vector2 scroll = Mouse.current.scroll.ReadValue();
+        Vector2 mouseDelta = Mouse.current.delta.ReadValue();
+
+        if (isGrounded && (Keyboard.current.wKey.wasPressedThisFrame || Keyboard.current.upArrowKey.wasPressedThisFrame || Keyboard.current.eKey.wasPressedThisFrame || Mouse.current.leftButton.wasPressedThisFrame || scroll.y > 0f || mouseDelta.y > 2f))
+            Jump();
+
+        if (Keyboard.current.zKey.wasPressedThisFrame || Keyboard.current.xKey.wasPressedThisFrame || Keyboard.current.downArrowKey.wasPressedThisFrame || Mouse.current.rightButton.wasPressedThisFrame || scroll.y < 0f || mouseDelta.y < -2f)
+            Slam();
+
+        if (mouseDelta.x > 2f) MoveRight();
+        else if (mouseDelta.x < -2f) MoveLeft();
+
+        // ✅ REMOVE rotation if touch controls are ON
+        if (!useTouchControls)
+        {
+            if (Mouse.current.leftButton.isPressed)
+                transform.Rotate(Vector3.up, -turnSpeed * Time.deltaTime);
+            if (Mouse.current.rightButton.isPressed)
+                transform.Rotate(Vector3.up, turnSpeed * Time.deltaTime);
+        }
+    }
+    #endregion
+
+    #region Movement Methods
+    void MoveRight()
+    {
+        rb.AddForce(Vector3.right * sidewaysForce * Time.deltaTime, ForceMode.VelocityChange);
+        PlaySound(rightClip);
+    }
+
+    void MoveLeft()
+    {
+        rb.AddForce(Vector3.left * sidewaysForce * Time.deltaTime, ForceMode.VelocityChange);
+        PlaySound(leftClip);
+    }
+
+    void Jump()
+    {
+        rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+        isGrounded = false;
+        PlaySound(jumpClip);
+    }
+
+    void Slam()
+    {
+        rb.AddForce(Vector3.down * downwardForce, ForceMode.Impulse);
+        PlaySound(slamClip);
+    }
+    #endregion
+
+    #region Touch Swipe
+    void HandleTouchInput()
+    {
+        if (Touchscreen.current == null || Touchscreen.current.primaryTouch == null) return;
+
+        var touch = Touchscreen.current.primaryTouch;
+
+        if (!touch.press.isPressed)
+        {
+            if (isSwiping)
+            {
+                isSwiping = false;
+                touchEndPos = touch.position.ReadValue();
+                Vector2 delta = touchEndPos - touchStartPos;
+
+                if (delta.magnitude >= swipeThreshold)
+                    ApplySwipe(delta);
+            }
+        }
+        else
+        {
+            if (!isSwiping)
+            {
+                isSwiping = true;
+                touchStartPos = touch.position.ReadValue();
+            }
+        }
+    }
+
+    void ApplySwipe(Vector2 delta)
+    {
+        float forceX = delta.x * swipeMultiplier;
+        float forceY = delta.y * swipeMultiplier;
+
+        if (Mathf.Abs(delta.x) > Mathf.Abs(delta.y))
+        {
+            Vector3 horizontalForce = delta.x > 0 ? Vector3.right : Vector3.left;
+            rb.AddForce(horizontalForce * Mathf.Abs(forceX) * swipeSidewaysMultiplier, ForceMode.Impulse);
+            PlaySound(swipeClip);
+        }
+        else
+        {
+            if (delta.y > 0 && isGrounded) { Jump(); PlaySound(swipeClip); }
+            else if (delta.y < 0) { Slam(); PlaySound(swipeClip); }
+        }
+    }
+    #endregion
+
+    #region Touch Buttons
+    public void SetTouchControls(bool enabled)
+    {
+        useTouchControls = enabled;
+        if (touchUI != null)
+            touchUI.SetActive(!enabled);
+    }
+
+    public void LeftButtonPressed() { MoveLeft(); }
+    public void RightButtonPressed() { MoveRight(); }
+    public void JumpButtonPressed() { if (isGrounded) Jump(); }
+    public void SlamButtonPressed() { Slam(); }
+    public void ActivateBoostButton() { if (!isBoostActive) StartCoroutine(ActivateBoost()); }
+    #endregion
+
+    void OnCollisionEnter(Collision collision)
+    {
+        if (collision.contacts.Length > 0 && collision.contacts[0].normal.y > 0.5f)
+            isGrounded = true;
+    }
+
+    #region Boost
+    private IEnumerator ActivateBoost()
+    {
+        isBoostActive = true;
+        PlaySound(boostClip);
+
+        yield return new WaitForSeconds(boostDuration);
+
+        isBoostActive = false;
+    }
+    #endregion
+
+    #region Audio
+    private void PlaySound(AudioClip clip)
+    {
+        if (audioSource != null && clip != null)
+            audioSource.PlayOneShot(clip, PlayerPrefs.GetFloat("masterVolume", 1f));
+    }
+    #endregion
+}

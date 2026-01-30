@@ -1,0 +1,46 @@
+using UnityEngine;
+
+public class PlayerCollision : MonoBehaviour
+{
+    [Header("References")]
+    public PMovement movement;
+    public Score score;
+    public AudioSource audioSource;
+    public AudioSource audioSource1;
+    public GameController gameController;
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        // If the player hits an obstacle
+        if (collision.gameObject.CompareTag("Obstacle"))
+        {audioSource1.Play();
+            if (movement != null)
+                movement.enabled = false;
+
+            if (gameController != null)
+                gameController.GameOver();
+
+            GameManager gm = FindFirstObjectByType<GameManager>();
+            if (gm != null)
+                gm.EndGame();
+        }
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        // If the player touches a Krita
+        if (other.gameObject.CompareTag("Krita"))
+        {audioSource.Play();
+            Destroy(other.gameObject);
+
+            if (score != null)
+            {
+                score.AddKrita(1);
+            }
+            else
+            {
+                Debug.LogWarning("⚠️ Score reference not assigned in PlayerCollision! Please drag the Score script into the inspector slot.");
+            }
+        }
+    }
+}

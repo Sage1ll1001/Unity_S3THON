@@ -1,0 +1,31 @@
+using UnityEngine;
+
+public class PlayerSkinManager : MonoBehaviour
+{
+    private Renderer rend;
+
+    void Start()
+    {
+        rend = GetComponent<Renderer>();
+
+        // Load equipped skin when gameplay starts
+        string equippedSkin = PlayerPrefs.GetString("PlayerSkin", "BlueCube");
+        ApplySkin(equippedSkin);
+    }
+
+    public void ApplySkin(string skinName)
+    {
+        Color color = Color.white;
+
+        switch (skinName)
+        {
+            case "RedCube": color = Color.red; break;
+            case "BlueCube": color = Color.blue; break;
+            case "GreenCube": color = Color.green; break;
+            case "WhiteCube": color = Color.white; break;
+            case "OrangeCube": color = new Color(1f, 0.5f, 0f); break;
+        }
+
+        rend.material.color = color;
+    }
+}

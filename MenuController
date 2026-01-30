@@ -1,0 +1,243 @@
+using UnityEngine;
+using UnityEngine.SceneManagement;
+using TMPro;
+using UnityEngine.UI;
+using System.Collections;
+using System.Collections.Generic;
+
+public class MenuController : MonoBehaviour
+{
+    [Header("Volume Settings")]
+    public TMP_Text volumeText = null;
+    public Slider volumeSlider = null;
+    public float defaultVolume = 1f;
+
+    [Header("Gameplay Settings")]
+    public Toggle touchControlsToggle = null;
+    public TMP_Text controllerSenTextValue = null;
+    public Slider controllerSenSlider = null;
+    public int defaultSen = 4;
+    public int mainControllerSen = 4;
+    public Toggle invertYToggle = null;
+
+    [Header("Graphics Settings")]
+    public Slider brightnessSlider = null;
+    public TMP_Text brightnessTextValue = null;
+    public float defaultBrightness = 1f;
+    public TMP_Dropdown qualityDropdown = null;
+    public Toggle fullscreenToggle = null;
+    private int _qualityLevel;
+    private bool _isFullscreen;
+    private float _brightnessLevel;
+
+    [Header("Resolution Settings")]
+    public TMP_Dropdown resolutionDropdown = null;
+    private Resolution[] resolutions;
+
+    [Header("Confirmation Prompt")]
+    public GameObject confirmationPrompt = null;
+
+    [Header("Scene Names")]
+    public string playGame;
+    public string exitGame;
+
+    void Start()
+    {
+        LoadSettings();
+        PopulateResolutions();
+    }
+
+    #region Scene Methods
+    public void PlayPanelYes() => SceneManager.LoadScene("L1");
+    public void ExitPanelYes() => Application.Quit();
+    #endregion
+
+    #region Volume Methods
+    public void SetVolume(float volume)
+    {
+        AudioListener.volume = volume;
+        if (volumeText != null) volumeText.text = volume.ToString("0.0");
+    }
+
+    public void VolumeApply()
+    {
+        PlayerPrefs.SetFloat("masterVolume", AudioListener.volume);
+        PlayerPrefs.Save();
+        StartCoroutine(ShowConfirmation());
+    }
+    #endregion
+
+    #region Gameplay Methods
+    public void SetControllerSen(float sensitivity)
+    {
+        mainControllerSen = Mathf.RoundToInt(sensitivity);
+        if (controllerSenTextValue != null) controllerSenTextValue.text = sensitivity.ToString("0");
+    }
+
+    public void GameplayApply()
+    {
+        if (invertYToggle != null)
+            PlayerPrefs.SetInt("masterInvertY", invertYToggle.isOn ? 1 : 0);
+
+        if (touchControlsToggle != null)
+            PlayerPrefs.SetInt("TouchControls", touchControlsToggle.isOn ? 1 : 0);
+
+        PlayerPrefs.SetInt("masterSens", mainControllerSen);
+        PlayerPrefs.Save();
+        StartCoroutine(ShowConfirmation());
+    }
+    #endregion
+
+    #region Graphics Methods
+    public void SetBrightness(float brightness)
+    {
+        _brightnessLevel = brightness;
+        if (brightnessTextValue != null) brightnessTextValue.text = brightness.ToString("0.0");
+        RenderSettings.ambientIntensity = brightness; // Apply brightness visually
+    }
+
+    public void SetFullscreen(bool isFullscreen)
+    {
+        _isFullscreen = isFullscreen;
+    }
+
+    public void SetQuality(int qualityIndex)
+    {
+        _qualityLevel = qualityIndex;
+    }
+
+    public void GraphicsApply()
+    {
+        PlayerPrefs.SetInt("masterQuality", _qualityLevel);
+        QualitySettings.SetQualityLevel(_qualityLevel);
+
+        PlayerPrefs.SetInt("masterFullscreen", _isFullscreen ? 1 : 0);
+        Screen.fullScreen = _isFullscreen;
+
+        PlayerPrefs.SetFloat("masterBrightness", _brightnessLevel);
+        RenderSettings.ambientIntensity = _brightnessLevel;
+
+        PlayerPrefs.Save();
+        StartCoroutine(ShowConfirmation());
+    }
+
+    public void SetResolution(int resolutionIndex)
+    {
+        if (resolutions == null || resolutionIndex < 0 || resolutionIndex >= resolutions.Length) return;
+
+        Resolution resolution = resolutions[resolutionIndex];
+        Screen.SetResolution(resolution.width, resolution.height, _isFullscreen);
+        PlayerPrefs.SetInt("masterResolutionIndex", resolutionIndex);
+        PlayerPrefs.Save();
+    }
+    #endregion
+
+    #region Reset Methods
+    public void ResetButton(string menuType)
+    {
+        switch (menuType)
+        {
+            case "Graphics":
+                if (brightnessSlider != null) brightnessSlider.value = defaultBrightness;
+                _brightnessLevel = defaultBrightness;
+                if (brightnessTextValue != null) brightnessTextValue.text = defaultBrightness.ToString("0.0");
+
+                if (qualityDropdown != null) qualityDropdown.value = 1;
+                _qualityLevel = 1;
+                QualitySettings.SetQualityLevel(1);
+
+                if (fullscreenToggle != null) fullscreenToggle.isOn = false;
+                _isFullscreen = false;
+                Screen.fullScreen = false;
+
+                GraphicsApply();
+                break;
+
+            case "Audio":
+                if (volumeSlider != null) volumeSlider.value = defaultVolume;
+                SetVolume(defaultVolume);
+                VolumeApply();
+                break;
+
+            case "Gameplay":
+                if (controllerSenSlider != null) controllerSenSlider.value = defaultSen;
+                mainControllerSen = defaultSen;
+                if (controllerSenTextValue != null) controllerSenTextValue.text = defaultSen.ToString("0");
+                if (invertYToggle != null) invertYToggle.isOn = false;
+                if (touchControlsToggle != null) touchControlsToggle.isOn = false;
+                GameplayApply();
+                break;
+        }
+    }
+    #endregion
+
+    #region Utility
+    private IEnumerator ShowConfirmation()
+    {
+        if (confirmationPrompt != null)
+        {
+            confirmationPrompt.SetActive(true);
+            yield return new WaitForSeconds(2f);
+            confirmationPrompt.SetActive(false);
+        }
+    }
+
+    private void LoadSettings()
+    {
+        // Volume
+        SetVolume(PlayerPrefs.GetFloat("masterVolume", defaultVolume));
+
+        // Brightness
+        SetBrightness(PlayerPrefs.GetFloat("masterBrightness", defaultBrightness));
+
+        // Quality
+        SetQuality(PlayerPrefs.GetInt("masterQuality", 1));
+
+        // Fullscreen
+        _isFullscreen = PlayerPrefs.GetInt("masterFullscreen", 1) == 1;
+        if (fullscreenToggle != null) fullscreenToggle.isOn = _isFullscreen;
+        Screen.fullScreen = _isFullscreen;
+
+        // Sensitivity
+        mainControllerSen = PlayerPrefs.GetInt("masterSens", defaultSen);
+        if (controllerSenSlider != null) controllerSenSlider.value = mainControllerSen;
+        if (controllerSenTextValue != null) controllerSenTextValue.text = mainControllerSen.ToString("0");
+
+        // Invert Y
+        if (invertYToggle != null) invertYToggle.isOn = PlayerPrefs.GetInt("masterInvertY", 0) == 1;
+
+        // Touch Controls
+        if (touchControlsToggle != null)
+            touchControlsToggle.isOn = PlayerPrefs.GetInt("TouchControls", 0) == 1;
+
+        // Resolution
+        PopulateResolutions();
+        int savedResolution = PlayerPrefs.GetInt("masterResolutionIndex", resolutions.Length - 1);
+        SetResolution(savedResolution);
+    }
+
+    private void PopulateResolutions()
+    {
+        resolutions = Screen.resolutions;
+        if (resolutionDropdown == null) return;
+
+        resolutionDropdown.ClearOptions();
+        List<string> options = new List<string>();
+        int currentResolutionIndex = 0;
+
+        for (int i = 0; i < resolutions.Length; i++)
+        {
+            string option = resolutions[i].width + " x " + resolutions[i].height;
+            options.Add(option);
+
+            if (resolutions[i].width == Screen.width && resolutions[i].height == Screen.height)
+                currentResolutionIndex = i;
+        }
+
+        resolutionDropdown.AddOptions(options);
+        resolutionDropdown.value = currentResolutionIndex;
+        resolutionDropdown.RefreshShownValue();
+        resolutionDropdown.onValueChanged.AddListener(SetResolution);
+    }
+    #endregion
+}

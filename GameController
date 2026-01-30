@@ -1,0 +1,29 @@
+using UnityEngine;
+using UnityEngine.SceneManagement;
+
+
+public class GameController : MonoBehaviour
+{
+    public GameObject gameOverPanel;
+    public void Start()
+    {
+        gameOverPanel.SetActive(false);
+    }
+
+    public void GameOver()
+    {   
+        gameOverPanel.SetActive(true);
+    }
+    public void Restart()
+    {
+        SceneManager.LoadScene("L1");
+    }
+    public void Home()
+    {
+        SceneManager.LoadScene("Main Menu");
+    }
+    public void Quit()
+    {
+        Application.Quit();
+    }
+}

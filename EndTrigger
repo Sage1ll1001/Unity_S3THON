@@ -1,0 +1,26 @@
+using UnityEngine;
+
+public class EndTrigger : MonoBehaviour
+{
+    private GameManager gameManager;
+
+    void Start()
+    {
+        // Automatically find the GameManager in the scene
+        gameManager = FindFirstObjectByType<GameManager>();
+    }
+
+    void OnTriggerEnter(Collider other)
+    {
+        Debug.Log("Triggered by: " + other.name);
+
+        if (other.CompareTag("Player") && gameManager != null)
+        {
+            gameManager.CompleteLevel();
+        }
+        else if (gameManager == null)
+        {
+            Debug.LogError("GameManager not found by EndTrigger!");
+        }
+    }
+}

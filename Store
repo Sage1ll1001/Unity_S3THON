@@ -1,0 +1,119 @@
+using UnityEngine;
+using UnityEngine.UI;
+using TMPro;
+
+public class StoreManager : MonoBehaviour
+{
+    [Header("UI References")]
+    public TextMeshProUGUI kritaText;
+
+    [Header("Cube Buttons")]
+    public Button redCubeButton;
+    public Button blueCubeButton;
+    public Button whiteCubeButton;
+    public Button greenCubeButton;
+    public Button orangeCubeButton;
+
+    [Header("Cube Status Texts")]
+    public TextMeshProUGUI redCubeStatus;
+    public TextMeshProUGUI blueCubeStatus;
+    public TextMeshProUGUI whiteCubeStatus;
+    public TextMeshProUGUI greenCubeStatus;
+    public TextMeshProUGUI orangeCubeStatus;
+
+    private int krita;
+
+    void Start()
+    {
+        // Load Kritas
+        krita = PlayerPrefs.GetInt("Krita", 0);
+
+        // Give default BlueCube to player if not owned
+        if (PlayerPrefs.GetInt("BlueCube_Owned", 0) == 0)
+        {
+            PlayerPrefs.SetInt("BlueCube_Owned", 1);
+            PlayerPrefs.SetString("PlayerSkin", "BlueCube");
+            PlayerPrefs.Save();
+        }
+
+        // Add button listeners
+        redCubeButton.onClick.AddListener(() => BuySkin("RedCube", 100));
+        blueCubeButton.onClick.AddListener(() => BuySkin("BlueCube", 0));
+        whiteCubeButton.onClick.AddListener(() => BuySkin("WhiteCube", 150));
+        greenCubeButton.onClick.AddListener(() => BuySkin("GreenCube", 200));
+        orangeCubeButton.onClick.AddListener(() => BuySkin("OrangeCube", 50));
+
+        UpdateUI();
+    }
+
+    void BuySkin(string skinName, int price)
+{
+    if (PlayerPrefs.GetInt(skinName + "_Owned", 0) == 1)
+    {
+        PlayerPrefs.SetString("PlayerSkin", skinName);
+        PlayerPrefs.Save();
+
+        
+
+        Debug.Log("✅ Equipped " + skinName);
+        UpdateUI();
+        return;
+    }
+
+    if (krita >= price)
+    {
+        krita -= price;
+        PlayerPrefs.SetInt("Krita", krita);
+        PlayerPrefs.SetInt(skinName + "_Owned", 1);
+        PlayerPrefs.SetString("PlayerSkin", skinName);
+        PlayerPrefs.Save();
+
+        FindObjectOfType<PlayerSkinManager>().ApplySkin(skinName); // 👈 add this
+
+        Debug.Log("💰 Bought " + skinName);
+        UpdateUI();
+    }
+    else
+    {
+        Debug.Log("❌ Not enough Kritas!");
+    }
+}
+
+
+    void UpdateUI()
+{
+    if (kritaText == null) Debug.LogError("❌ kritaText is missing!");
+    if (redCubeStatus == null) Debug.LogError("❌ redCubeStatus missing!");
+    if (blueCubeStatus == null) Debug.LogError("❌ blueCubeStatus missing!");
+    if (whiteCubeStatus == null) Debug.LogError("❌ whiteCubeStatus missing!");
+    if (greenCubeStatus == null) Debug.LogError("❌ greenCubeStatus missing!");
+    if (orangeCubeStatus == null) Debug.LogError("❌ orangeCubeStatus missing!");
+
+    kritaText.text = "Kritas: " + krita;
+
+    SetStatus("RedCube", 100, redCubeStatus);
+    SetStatus("BlueCube", 0, blueCubeStatus);
+    SetStatus("WhiteCube", 150, whiteCubeStatus);
+    SetStatus("GreenCube", 200, greenCubeStatus);
+    SetStatus("OrangeCube", 50, orangeCubeStatus);
+}
+
+
+    void SetStatus(string name, int price, TextMeshProUGUI statusText)
+    {
+        string equipped = PlayerPrefs.GetString("PlayerSkin", "BlueCube");
+        bool owned = PlayerPrefs.GetInt(name + "_Owned", 0) == 1;
+
+        if (owned)
+        {
+            if (equipped == name)
+                statusText.text = "Equipped";
+            else
+                statusText.text = "Owned";
+        }
+        else
+        {
+            statusText.text = "Buy (" + price + ")";
+        }
+    }
+}

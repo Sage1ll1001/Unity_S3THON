@@ -1,0 +1,43 @@
+using UnityEngine;
+
+public class ApplySkin : MonoBehaviour
+{
+    [Header("Cube Materials")]
+    public Material redMat;
+    public Material blueMat;
+    public Material whiteMat;
+    public Material greenMat;
+    public Material orangeMat;
+
+    private Renderer cubeRenderer;
+
+    void Start()
+    {
+        cubeRenderer = GetComponent<Renderer>();
+        ApplyCurrentSkin();
+    }
+
+    public void ApplyCurrentSkin()
+    {
+        string skin = PlayerPrefs.GetString("PlayerSkin", "BlueCube");
+
+        switch (skin)
+        {
+            case "RedCube":
+                cubeRenderer.material = redMat;
+                break;
+            case "WhiteCube":
+                cubeRenderer.material = whiteMat;
+                break;
+            case "GreenCube":
+                cubeRenderer.material = greenMat;
+                break;
+            case "OrangeCube":
+                cubeRenderer.material = orangeMat;
+                break;
+            default:
+                cubeRenderer.material = blueMat;
+                break;
+        }
+    }
+}

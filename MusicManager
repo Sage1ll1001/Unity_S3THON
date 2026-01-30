@@ -1,0 +1,43 @@
+using UnityEngine;
+
+public class MusicManager : MonoBehaviour
+{
+    [Header("Scene Music")]
+    public AudioClip sceneMusic;         // Assign music for this scene
+    public bool persistBetweenScenes = false; // Set true if you want continuous music
+
+    private static MusicManager instance; // For persistence
+    private AudioSource audioSource;
+
+    void Awake()
+    {
+        // Handle persistence across scenes
+        if (persistBetweenScenes)
+        {
+            if (instance == null)
+            {
+                instance = this;
+                DontDestroyOnLoad(gameObject);
+            }
+            else
+            {
+                Destroy(gameObject); // Avoid duplicate music
+                return;
+            }
+        }
+
+        // Add AudioSource dynamically
+        audioSource = gameObject.AddComponent<AudioSource>();
+        audioSource.clip = sceneMusic;
+        audioSource.loop = true;
+        audioSource.playOnAwake = true;
+
+        audioSource.Play();
+    }
+
+    void Update()
+    {
+        // Sync volume with menu slider (PlayerPrefs)
+        audioSource.volume = PlayerPrefs.GetFloat("masterVolume", 1f);
+    }
+}
